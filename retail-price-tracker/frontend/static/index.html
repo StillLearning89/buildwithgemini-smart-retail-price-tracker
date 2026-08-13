@@ -1,0 +1,673 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Smart Retail Price Tracker — Gemini Edition</title>
+<!-- Material Symbols Outlined & Google Fonts Inter -->
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    /* Google Gemini Light Palette */
+    --gemini-gradient: linear-gradient(135deg, #1a73e8 0%, #7c3aed 50%, #d946ef 100%);
+    --gemini-blue: #1a73e8;
+    --gemini-blue-light: #e8f0fe;
+    --bg: #f8fafd;
+    --sidebar-bg: #ffffff;
+    --header-bg: #ffffff;
+    --card-bg: #ffffff;
+    --border: #e1e3e5;
+    --text-primary: #1f1f1f;
+    --text-secondary: #444746;
+    --user-bubble-bg: linear-gradient(135deg, #1a73e8 0%, #6366f1 100%);
+    --user-bubble-text: #ffffff;
+    --agent-bubble-bg: #f0f4f9;
+    --agent-bubble-text: #1f1f1f;
+    --pill-bg: #f0f4f9;
+    --pill-text: #374151;
+    --pill-hover: #e8f0fe;
+    --shadow-sm: 0 1px 3px rgba(0,0,0,0.05);
+    --shadow-md: 0 4px 12px rgba(0,0,0,0.06);
+  }
+
+  [data-theme="dark"] {
+    /* Google Gemini Dark Palette */
+    --gemini-gradient: linear-gradient(135deg, #a8c7fa 0%, #c084fc 50%, #f472b6 100%);
+    --gemini-blue: #a8c7fa;
+    --gemini-blue-light: #1e293b;
+    --bg: #131314;
+    --sidebar-bg: #1e1e20;
+    --header-bg: #1e1e20;
+    --card-bg: #1e1e20;
+    --border: #2e2f31;
+    --text-primary: #e3e3e3;
+    --text-secondary: #c4c7c5;
+    --user-bubble-bg: linear-gradient(135deg, #2563eb 0%, #4f46e5 100%);
+    --user-bubble-text: #ffffff;
+    --agent-bubble-bg: #28292a;
+    --agent-bubble-text: #e3e3e3;
+    --pill-bg: #28292a;
+    --pill-text: #e3e3e3;
+    --pill-hover: #37393b;
+    --shadow-sm: 0 1px 3px rgba(0,0,0,0.3);
+    --shadow-md: 0 4px 12px rgba(0,0,0,0.4);
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--text-primary);
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    overflow: hidden;
+    transition: background 0.25s ease, color 0.25s ease;
+  }
+
+  /* Top Navigation Header */
+  header {
+    background: var(--header-bg);
+    border-bottom: 1px solid var(--border);
+    padding: 0.85rem 1.5rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: var(--shadow-sm);
+    z-index: 20;
+  }
+  .header-brand {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+  }
+  .gemini-sparkle-icon {
+    font-size: 1.6rem;
+    background: var(--gemini-gradient);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    display: inline-block;
+  }
+  .brand-title {
+    font-size: 1.2rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    background: var(--gemini-gradient);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .brand-tag {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    background: var(--pill-bg);
+    padding: 0.25rem 0.6rem;
+    border-radius: 12px;
+    margin-left: 0.4rem;
+  }
+
+  .theme-toggle {
+    background: var(--pill-bg);
+    border: 1px solid var(--border);
+    color: var(--text-primary);
+    border-radius: 20px;
+    padding: 0.4rem 0.85rem;
+    font-size: 0.825rem;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    transition: all 0.2s ease;
+  }
+  .theme-toggle:hover {
+    background: var(--pill-hover);
+  }
+
+  /* Main Application Container Layout: Sidebar (Left) + Chat Workspace (Right) */
+  #app-container {
+    display: flex;
+    flex: 1;
+    height: calc(100vh - 61px);
+    overflow: hidden;
+  }
+
+  /* LEFT SIDEBAR CONTROLS */
+  #left-sidebar {
+    width: 270px;
+    background: var(--sidebar-bg);
+    border-right: 1px solid var(--border);
+    padding: 1.25rem 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    overflow-y: auto;
+    box-shadow: var(--shadow-sm);
+    z-index: 10;
+  }
+
+  .sidebar-section {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+  }
+
+  .sidebar-title {
+    font-size: 0.725rem;
+    font-weight: 700;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    margin-bottom: 0.2rem;
+  }
+
+  /* VERTICAL GEMINI GRADIENT BUTTONS */
+  .store-pill {
+    width: 100%;
+    background: var(--pill-bg);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 0.65rem 0.9rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--pill-text);
+    cursor: pointer;
+    text-align: left;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+  }
+
+  .store-pill:hover {
+    background: var(--pill-hover);
+    border-color: var(--gemini-blue);
+    color: var(--gemini-blue);
+  }
+
+  /* Active State with Vibrant Gemini Gradient */
+  .store-pill.active {
+    background: var(--gemini-gradient);
+    color: #ffffff;
+    border: none;
+    box-shadow: 0 4px 12px rgba(26, 115, 232, 0.3);
+  }
+
+  .prompt-btn {
+    width: 100%;
+    background: var(--pill-bg);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 0.7rem 0.9rem;
+    font-size: 0.825rem;
+    font-weight: 500;
+    color: var(--pill-text);
+    cursor: pointer;
+    text-align: left;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+    line-height: 1.4;
+  }
+
+  .prompt-btn:hover {
+    background: var(--gemini-gradient);
+    color: #ffffff;
+    border-color: transparent;
+    box-shadow: 0 4px 12px rgba(26, 115, 232, 0.25);
+    transform: translateY(-1px);
+  }
+  .prompt-btn:hover .material-symbols-outlined {
+    color: #ffffff;
+  }
+
+  /* RIGHT MAIN CHAT AREA */
+  #chat-workspace {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    overflow: hidden;
+    background: var(--bg);
+  }
+
+  #log {
+    flex: 1;
+    overflow-y: auto;
+    padding: 1.5rem 2rem;
+    max-width: 860px;
+    width: 100%;
+    margin: 0 auto;
+  }
+  .msg { margin: 1rem 0; }
+  .msg.user { text-align: right; }
+  .bubble {
+    display: inline-block;
+    padding: 0.95rem 1.35rem;
+    border-radius: 20px;
+    background: var(--agent-bubble-bg);
+    color: var(--agent-bubble-text);
+    text-align: left;
+    max-width: 88%;
+    white-space: pre-wrap;
+    line-height: 1.55;
+    box-shadow: var(--shadow-sm);
+  }
+  .msg.user .bubble {
+    background: var(--user-bubble-bg);
+    color: var(--user-bubble-text);
+    border-bottom-right-radius: 4px;
+    box-shadow: 0 2px 10px rgba(26, 115, 232, 0.25);
+  }
+  .msg.agent .bubble {
+    border-bottom-left-radius: 4px;
+  }
+  .bubble.rich {
+    background: transparent;
+    border: none;
+    padding: 0;
+    max-width: 100%;
+    white-space: normal;
+    box-shadow: none;
+  }
+
+  /* Bottom Input Form */
+  form {
+    display: flex;
+    gap: 0.75rem;
+    padding: 1.25rem 2rem;
+    background: var(--header-bg);
+    border-top: 1px solid var(--border);
+    max-width: 860px;
+    width: 100%;
+    margin: 0 auto;
+  }
+  input {
+    flex: 1;
+    padding: 0.9rem 1.25rem;
+    border: 1px solid var(--border);
+    border-radius: 24px;
+    font-size: 0.95rem;
+    outline: none;
+    background: var(--bg);
+    color: var(--text-primary);
+    transition: all 0.2s ease;
+  }
+  input:focus {
+    border-color: var(--gemini-blue);
+    box-shadow: 0 0 0 3px rgba(26, 115, 232, 0.18);
+  }
+  button.submit-btn {
+    padding: 0.9rem 1.6rem;
+    border: none;
+    border-radius: 24px;
+    background: var(--gemini-gradient);
+    color: #ffffff;
+    font-weight: 600;
+    font-size: 0.95rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    transition: opacity 0.2s ease, transform 0.15s ease;
+    box-shadow: 0 4px 12px rgba(26, 115, 232, 0.3);
+  }
+  button.submit-btn:hover {
+    opacity: 0.92;
+    transform: translateY(-1px);
+  }
+
+  /* --- A2UI component styles --- */
+  .a2card {
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 1.4rem;
+    background: var(--card-bg);
+    color: var(--text-primary);
+    box-shadow: var(--shadow-md);
+    max-width: 100%;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+  .a2card:hover {
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+  }
+  .a2card + .a2card, .a2col > .a2card { margin-top: 0.9rem; }
+  .a2col { display: flex; flex-direction: column; gap: 0.55rem; }
+  .a2row { display: flex; flex-direction: row; gap: 0.8rem; align-items: center; flex-wrap: wrap; }
+  .a2row.between { justify-content: space-between; }
+  .a2text { margin: 0; line-height: 1.5; color: var(--text-primary); }
+  .a2text.a2-h1 { font-size: 1.35rem; font-weight: 700; color: var(--gemini-blue); letter-spacing: -0.02em; }
+  .a2text.a2-h2 { font-size: 1.15rem; font-weight: 700; color: var(--gemini-blue); letter-spacing: -0.01em; }
+  .a2text.a2-h3 { font-size: 1.05rem; font-weight: 600; }
+  .a2text.a2-h4 { font-size: 0.95rem; font-weight: 600; }
+  .a2text.a2-caption { font-size: 0.825rem; color: var(--text-secondary); }
+  .a2divider { border: none; border-top: 1px solid var(--border); margin: 0.65rem 0; width: 100%; }
+  
+  .a2img {
+    width: 100%;
+    max-height: 280px;
+    object-fit: cover;
+    border-radius: 16px;
+    display: block;
+    margin: 0.6rem 0;
+    box-shadow: var(--shadow-sm);
+  }
+
+  .material-symbols-outlined {
+    font-family: 'Material Symbols Outlined';
+    font-size: 1.25rem;
+    line-height: 1;
+    vertical-align: middle;
+    color: var(--gemini-blue);
+  }
+
+  /* Responsive Mobile View */
+  @media (max-width: 768px) {
+    #app-container { flex-direction: column; height: auto; }
+    #left-sidebar { width: 100%; border-right: none; border-bottom: 1px solid var(--border); }
+  }
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<header>
+  <div class="header-brand">
+    <span class="material-symbols-outlined gemini-sparkle-icon">auto_awesome</span>
+    <span class="brand-title">Smart Retail Tracker</span>
+    <span class="brand-tag">Gemini Edition</span>
+  </div>
+  <button id="theme-toggle" class="theme-toggle">
+    <span class="material-symbols-outlined" style="font-size:1.1rem; color:inherit;">dark_mode</span>
+    <span id="theme-text">Dark Mode</span>
+  </button>
+</header>
+
+<!-- Main App Container -->
+<div id="app-container">
+
+  <!-- LEFT SIDEBAR CONTROLS WITH GEMINI GRADIENT BUTTONS -->
+  <div id="left-sidebar">
+    
+    <!-- Store Filters Section -->
+    <div class="sidebar-section">
+      <div class="sidebar-title">
+        <span class="material-symbols-outlined">filter_alt</span>
+        Select Retailer
+      </div>
+      <button class="store-pill active" data-store="All">
+        <span>🏬</span> All Retailers
+      </button>
+      <button class="store-pill" data-store="Costco">
+        <span>🏷️</span> Costco
+      </button>
+      <button class="store-pill" data-store="Amazon">
+        <span>📦</span> Amazon
+      </button>
+      <button class="store-pill" data-store="Walmart">
+        <span>🛒</span> Walmart
+      </button>
+      <button class="store-pill" data-store="Target">
+        <span>🎯</span> Target
+      </button>
+      <button class="store-pill" data-store="Best Buy">
+        <span>💻</span> Best Buy
+      </button>
+    </div>
+
+    <!-- Quick Prompts Section -->
+    <div class="sidebar-section">
+      <div class="sidebar-title">
+        <span class="material-symbols-outlined">lightbulb</span>
+        Example Prompts
+      </div>
+      <button class="prompt-btn" data-prompt="Find me the best price for Google Pixel Buds and Pixel 10 Pro XL across top stores and Google Store.">
+        <span class="material-symbols-outlined">smartphone</span>
+        <span>Pixel 10 Pro & Buds Deals</span>
+      </button>
+      <button class="prompt-btn" data-prompt="Find me the best price for a 65-inch OLED TV under $1500 including my Costco membership discount.">
+        <span class="material-symbols-outlined">tv</span>
+        <span>65" OLED TV Search</span>
+      </button>
+      <button class="prompt-btn" data-prompt="Calculate net checkout total for a $1399.99 item at Costco in zip code 95112 with Executive membership.">
+        <span class="material-symbols-outlined">calculate</span>
+        <span>Net Total Calculator</span>
+      </button>
+      <button class="prompt-btn" data-prompt="What is Costco's policy on price matching and what is their return window for major electronics?">
+        <span class="material-symbols-outlined">policy</span>
+        <span>Return & Price Policy</span>
+      </button>
+    </div>
+
+  </div>
+
+  <!-- RIGHT CHAT WORKSPACE -->
+  <div id="chat-workspace">
+    <div id="log"></div>
+
+    <form id="form">
+      <input id="input" placeholder="Ask Gemini to compare prices, compute total cost, or check store policies..." autocomplete="off" autofocus>
+      <button type="submit" class="submit-btn">
+        <span>Send</span>
+        <span class="material-symbols-outlined" style="font-size:1.1rem; color:#fff;">send</span>
+      </button>
+    </form>
+  </div>
+
+</div>
+
+<script>
+const log = document.getElementById("log");
+const form = document.getElementById("form");
+const input = document.getElementById("input");
+const themeToggle = document.getElementById("theme-toggle");
+const themeText = document.getElementById("theme-text");
+
+let activeStore = "All";
+
+// Store Logo Auto-Formatter Helper
+function formatStoreIcons(str) {
+  if (!str || typeof str !== "string") return str;
+  return str
+    .replace(/\bGoogle Store\b/gi, "🌐 Google Store")
+    .replace(/\bGoogle\b(?! Store)/gi, "🌐 Google")
+    .replace(/\bAmazon\b/gi, "📦 Amazon")
+    .replace(/\bBest Buy\b/gi, "💻 Best Buy")
+    .replace(/\bTarget\b/gi, "🎯 Target")
+    .replace(/\bWalmart\b/gi, "🛒 Walmart")
+    .replace(/\bCostco\b/gi, "🏷️ Costco")
+    .replace(/🌐\s*🌐/g, "🌐")
+    .replace(/📦\s*📦/g, "📦")
+    .replace(/💻\s*💻/g, "💻")
+    .replace(/🎯\s*🎯/g, "🎯")
+    .replace(/🛒\s*🛒/g, "🛒")
+    .replace(/🏷️\s*🏷️/g, "🏷️");
+}
+
+// Theme Switcher
+themeToggle.addEventListener("click", () => {
+  const isDark = document.body.getAttribute("data-theme") === "dark";
+  if (isDark) {
+    document.body.removeAttribute("data-theme");
+    themeText.textContent = "Dark Mode";
+    themeToggle.querySelector(".material-symbols-outlined").textContent = "dark_mode";
+  } else {
+    document.body.setAttribute("data-theme", "dark");
+    themeText.textContent = "Light Mode";
+    themeToggle.querySelector(".material-symbols-outlined").textContent = "light_mode";
+  }
+});
+
+// Store Badge Filter Selector
+document.querySelectorAll(".store-pill").forEach(pill => {
+  pill.addEventListener("click", () => {
+    document.querySelectorAll(".store-pill").forEach(p => p.classList.remove("active"));
+    pill.classList.add("active");
+    activeStore = pill.getAttribute("data-store");
+  });
+});
+
+function el(tag, cls, text) { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
+
+function bubble(who) {
+  const m = el("div", "msg " + who);
+  const b = el("div", "bubble");
+  m.appendChild(b); log.appendChild(m); log.scrollTop = log.scrollHeight;
+  return b;
+}
+
+function boundStr(v) {
+  if (v == null) return "";
+  if (typeof v === "string") return v;
+  if (typeof v.literalString === "string") return v.literalString;
+  return "";
+}
+
+function childIds(props) {
+  const ids = [];
+  if (props && typeof props.child === "string") ids.push(props.child);
+  const ch = props && props.children;
+  if (ch && Array.isArray(ch.explicitList)) for (const c of ch.explicitList) if (typeof c === "string") ids.push(c);
+  return ids;
+}
+
+function iconName(n) { return String(n || "").replace(/([a-z0-9])([A-Z])/g, "$1_$2").replace(/\s+/g, "_").toLowerCase(); }
+
+function buildNode(id, comps, seen) {
+  if (!id || seen.has(id)) return null;
+  seen.add(id);
+  const spec = comps[id];
+  if (!spec || typeof spec !== "object") return null;
+  const type = Object.keys(spec)[0];
+  const props = spec[type] || {};
+  const kids = () => childIds(props).map(cid => buildNode(cid, comps, seen)).filter(Boolean);
+
+  switch (type) {
+    case "Card": {
+      const d = el("div", "a2card"); kids().forEach(n => d.appendChild(n)); return d;
+    }
+    case "Column":
+    case "List": {
+      const horizontal = type === "List" && props.direction === "horizontal";
+      const d = el("div", horizontal ? "a2row" : "a2col"); kids().forEach(n => d.appendChild(n)); return d;
+    }
+    case "Row": {
+      const d = el("div", "a2row" + (props.distribution === "spaceBetween" ? " between" : ""));
+      kids().forEach(n => d.appendChild(n)); return d;
+    }
+    case "Text": {
+      const t = el("div", "a2text");
+      const hint = String(props.usageHint || "body").toLowerCase();
+      if (["h1", "h2", "h3", "h4", "h5", "h6"].includes(hint)) t.classList.add("a2-" + hint);
+      else if (hint === "caption") t.classList.add("a2-caption");
+      const textVal = boundStr(props.text);
+      t.textContent = formatStoreIcons(textVal);
+      return t;
+    }
+    case "Divider":
+      return el("hr", "a2divider");
+    case "Image": {
+      const src = boundStr(props.url || props.src);
+      if (!/^https?:\/\//i.test(src)) return null;
+      const img = el("img", "a2img"); img.src = src; img.alt = boundStr(props.alt) || "Product Image"; return img;
+    }
+    case "Icon": {
+      const s = el("span", "material-symbols-outlined"); s.textContent = iconName(boundStr(props.name) || props.name); return s;
+    }
+    default:
+      return null;
+  }
+}
+
+function renderSurface(messages, container) {
+  const comps = {};
+  const roots = [];
+  for (const m of messages) {
+    if (m.beginRendering && typeof m.beginRendering.root === "string") roots.push(m.beginRendering.root);
+    const su = m.surfaceUpdate;
+    if (su && Array.isArray(su.components)) for (const c of su.components) if (c && c.id && c.component) comps[c.id] = c.component;
+  }
+  let rootIds = roots.filter(r => comps[r]);
+  if (rootIds.length === 0) {
+    const referenced = new Set();
+    for (const id in comps) { const spec = comps[id]; childIds(spec[Object.keys(spec)[0]] || {}).forEach(c => referenced.add(c)); }
+    rootIds = Object.keys(comps).filter(id => !referenced.has(id));
+  }
+  let drew = false;
+  for (const rid of rootIds) { const node = buildNode(rid, comps, new Set()); if (node) { container.appendChild(node); drew = true; } }
+  return drew;
+}
+
+function flattenText(messages) {
+  const out = [];
+  for (const m of messages) {
+    const su = m.surfaceUpdate;
+    if (su && Array.isArray(su.components)) for (const c of su.components) if (c && c.component && c.component.Text) out.push(boundStr(c.component.Text.text));
+  }
+  return formatStoreIcons(out.join("\n").trim());
+}
+
+function renderReply(b, parts) {
+  b.textContent = "";
+  const texts = parts.filter(p => p && (p.kind === "text" || (!p.kind && p.text))).map(p => p.text || "");
+  const a2ui = parts.filter(p => p && p.kind === "a2ui" && p.data).map(p => p.data);
+
+  const textStr = formatStoreIcons(texts.join("\n").trim());
+  if (textStr) b.appendChild(el("div", null, textStr));
+
+  if (a2ui.length) {
+    b.classList.add("rich");
+    if (!renderSurface(a2ui, b)) b.appendChild(el("div", null, flattenText(a2ui) || "(no card content)"));
+  }
+  if (!b.childNodes.length) b.textContent = "(no response)";
+  log.scrollTop = log.scrollHeight;
+}
+
+async function sendMessage(text) {
+  if (!text) return;
+  
+  let queryText = text;
+  if (activeStore !== "All" && !text.toLowerCase().includes(activeStore.toLowerCase())) {
+    queryText += ` [Filter: Store=${activeStore}]`;
+  }
+
+  bubble("user").textContent = text + (activeStore !== "All" ? ` (${activeStore} only)` : "");
+  input.value = "";
+  const b = bubble("agent"); b.textContent = "Analyzing deals & calculating…";
+  try {
+    const res = await fetch("/chat", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ message: queryText }) });
+    const raw = await res.text();
+    let data;
+    try { data = JSON.parse(raw); }
+    catch { throw new Error(`Server returned non-JSON (HTTP ${res.status}). ${raw.slice(0, 300)}`); }
+    renderReply(b, data.parts || []);
+  } catch (e) {
+    b.textContent = "Error: " + e.message;
+  }
+}
+
+form.addEventListener("submit", (ev) => {
+  ev.preventDefault();
+  sendMessage(input.value.trim());
+});
+
+document.querySelectorAll(".prompt-btn").forEach(btn => {
+  btn.addEventListener("click", () => {
+    const promptText = btn.getAttribute("data-prompt");
+    if (promptText) {
+      input.value = promptText;
+      sendMessage(promptText);
+    }
+  });
+});
+</script>
+</body>
+</html>

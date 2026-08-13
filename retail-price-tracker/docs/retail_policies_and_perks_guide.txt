@@ -1,0 +1,92 @@
+================================================================================
+RETAIL POLICIES, MEMBERSHIP PERKS & PRICE PROTECTION REFERENCE GUIDE
+================================================================================
+
+1. MAJOR RETAILER PRICE MATCH POLICIES
+--------------------------------------------------------------------------------
+* COSTCO:
+  - Competitor Price Matching: Costco DOES NOT match prices of external competitors (Amazon, Walmart, Best Buy, Target).
+  - Internal Price Adjustments: If a product purchased at Costco (in-store or Costco.com) goes on sale at Costco within 30 days of purchase, members can request a price adjustment credit for the difference.
+  - Costco.com vs. In-Store: Online prices may be higher than warehouse prices due to included shipping and handling fees.
+
+* AMAZON:
+  - Competitor Price Matching: Amazon DOES NOT match competitor prices or offer post-purchase price drop adjustments (with rare exceptions for select promotional TV purchases within 14 days).
+  - Third-Party Marketplace: Prices for items sold by third-party sellers on Amazon are set by the individual merchant and fluctuate frequently.
+
+* WALMART:
+  - Competitor Price Matching: Walmart stores do NOT match online prices from competitors.
+  - Walmart.com Matching: Walmart store locations will match Walmart.com listed prices for identical in-stock items, provided the item is sold directly by Walmart (not a third-party Marketplace seller). Limit 1 price match per customer per day.
+
+* BEST BUY:
+  - Price Match Guarantee: Best Buy matches in-store and online prices of local brick-and-mortar competitors and select major online retailers (Amazon.com, Walmart.com, Target.com, Crutchfield.com, HP.com) at time of purchase.
+  - Price Adjustments: If Best Buy lowers its price during the product's return/exchange period, Best Buy will match the lower price upon request.
+  - Exclusions: Black Friday deals, clearance/open-box items, third-party marketplace listings, and special member-only pricing events are excluded.
+
+* TARGET:
+  - Competitor Price Matching: Target matches Target.com prices as well as select online competitors (Amazon, Walmart, Best Buy) within 14 days of purchase.
+  - Requirements: Item must be identical in brand, size, weight, color, and model number, and currently in-stock at the competitor.
+
+
+2. RETURN WINDOWS & ELECTRONICS EXCEPTIONS
+--------------------------------------------------------------------------------
+* COSTCO:
+  - Major Electronics: 90-day return window for Televisions, Projectors, Laptops, Tablets, Smartwatches, Cameras, and Cellular Phones.
+  - General Merchandise: Covered by Costco's 100% Member Satisfaction Guarantee with an unlimited return timeframe for most non-electronic goods.
+
+* AMAZON:
+  - Standard Return Window: 30 days from date of delivery for most new, unopened items shipped by Amazon.
+  - Holiday Return Policy: Items purchased between October 1 and December 31 can be returned until January 31 of the following year.
+  - Renewed / Refurbished Items: Amazon Renewed products carry a 90-day guarantee/return window (or 1 year for Amazon Renewed Premium).
+
+* WALMART:
+  - Standard Merchandise: 90-day return window.
+  - Electronics & Laptops: 30-day return window for TVs, computers, tablets, cameras, and audio equipment.
+  - Cell Phones: 14-day return window for wireless phones.
+
+* BEST BUY:
+  - Standard Customers: 15-day return window for most products.
+  - My Best Buy Plus / Total Members: Extended 60-day return window.
+  - Restocking Fees: 15% restocking fee applies to returned activated devices, drones, and professional DSLR cameras.
+
+
+3. MEMBERSHIP TIERS, FEES & EXCLUSIVE PERKS
+--------------------------------------------------------------------------------
+* COSTCO WHOLESALE:
+  - Gold Star Membership ($65/year): Standard access to all Costco warehouse locations worldwide and Costco.com.
+  - Executive Membership ($130/year): Includes a 2% Annual Executive Reward on qualified Costco purchases (up to $1,000 maximum reward per year). Includes free concierge technical support and extended warranty benefits.
+
+* AMAZON PRIME:
+  - Annual Fee: $139/year (or $14.99/month).
+  - Shipping Perks: Free Same-Day, 1-Day, and 2-Day delivery on eligible Prime items.
+  - Additional Perks: Prime Day exclusive sale access, Prime Video, Prime Music, and 5% cashback when using the Prime Visa card.
+
+* WALMART+:
+  - Annual Fee: $98/year (or $12.95/month).
+  - Benefits: Free shipping with no order minimum on Walmart.com items, free same-day delivery on grocery orders ($35 minimum), 10¢ per gallon fuel discount at participating Exxon/Mobil/Walmart stations, and included Paramount+ subscription.
+
+* TARGET CIRCLE 360:
+  - Annual Fee: $99/year.
+  - Benefits: Unlimited same-day delivery via Shipt on orders over $35, free 2-day shipping on Target.com, and an extra 30 days for returns.
+
+
+4. SHIPPING & FREIGHT RULES
+--------------------------------------------------------------------------------
+* COSTCO.COM:
+  - Most item prices listed on Costco.com include shipping and handling.
+  - Freight Delivery: Large televisions (65"+) and major appliances include threshold delivery or white-glove setup options.
+
+* AMAZON:
+  - Non-Prime Orders: Free standard shipping on eligible orders totaling $35 or more. Orders under $35 incur a standard $5.99+ shipping charge.
+
+* WALMART.COM:
+  - Non-Walmart+ Orders: Free 2-day shipping on orders totaling $35 or more. Orders under $35 incur a flat $6.99 shipping fee.
+
+
+5. UNIT PRICE & BULK SAVINGS EVALUATION GUIDELINES
+--------------------------------------------------------------------------------
+* When comparing bulk warehouse club items (Costco) against traditional retail listings (Amazon, Walmart, Target):
+  - Always convert the total price to a standardized unit metric:
+    * Food / Liquids: Price per ounce ($/oz) or Price per pound ($/lb)
+    * Paper Goods / Household: Price per sheet, square foot, or roll
+    * Electronics / Goods: Price per individual unit or multi-pack item
+  - Factor in membership annual fees against expected annual purchase volume when calculating net savings.
