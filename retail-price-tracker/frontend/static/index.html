@@ -323,42 +323,125 @@
   button.submit-btn:hover {
     opacity: 0.92;
     transform: translateY(-1px);
-  }  /* Collapsible Itemized Receipt Accordion */
-  .receipt-accordion {
+  }  /* Senior UI Receipt Component */
+  .receipt-card {
     border: 1px solid var(--border);
     border-radius: 16px;
     background: var(--card-bg);
-    margin: 0.8rem 0;
+    margin: 1rem 0;
     overflow: hidden;
-    box-shadow: var(--shadow-sm);
-    transition: all 0.2s ease;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+    transition: all 0.25s ease;
   }
-  .receipt-accordion[open] {
-    box-shadow: var(--shadow-md);
+  .receipt-card[open] {
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.08);
+    border-color: rgba(26, 115, 232, 0.4);
   }
-  .receipt-summary {
-    padding: 0.9rem 1.1rem;
-    font-weight: 600;
-    font-size: 0.925rem;
-    color: var(--gemini-blue);
+  .receipt-header {
+    padding: 0.95rem 1.25rem;
     background: var(--pill-bg);
     cursor: pointer;
     user-select: none;
     display: flex;
     align-items: center;
-    gap: 0.5rem;
+    justify-content: space-between;
+    transition: background 0.2s ease;
+    list-style: none;
   }
-  .receipt-summary:hover {
+  .receipt-header::-webkit-details-marker {
+    display: none;
+  }
+  .receipt-header:hover {
     background: var(--pill-hover);
   }
+  .receipt-title {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    font-weight: 700;
+    font-size: 0.95rem;
+    color: var(--text-primary);
+  }
+  .receipt-price-badge {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    color: #ffffff;
+    font-size: 0.85rem;
+    font-weight: 700;
+    padding: 0.35rem 0.85rem;
+    border-radius: 20px;
+    box-shadow: 0 2px 8px rgba(16, 185, 129, 0.25);
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+  }
+  .receipt-toggle-icon {
+    font-size: 1.2rem;
+    color: var(--text-secondary);
+    transition: transform 0.2s ease;
+  }
+  .receipt-card[open] .receipt-toggle-icon {
+    transform: rotate(180deg);
+  }
   .receipt-body {
-    padding: 1rem 1.25rem;
-    font-family: monospace, 'Inter', sans-serif;
-    font-size: 0.875rem;
-    line-height: 1.6;
+    padding: 1.25rem 1.5rem;
     border-top: 1px solid var(--border);
-    white-space: pre-wrap;
-    background: var(--bg);
+    background: var(--card-bg);
+    display: flex;
+    flex-direction: column;
+    gap: 0.65rem;
+  }
+  .receipt-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.35rem 0;
+    font-size: 0.9rem;
+    border-bottom: 1px dashed rgba(128, 128, 128, 0.15);
+  }
+  .receipt-row:last-child {
+    border-bottom: none;
+  }
+  .receipt-row-label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--text-primary);
+    font-weight: 500;
+  }
+  .receipt-row-val {
+    font-weight: 600;
+    color: var(--text-primary);
+    text-align: right;
+  }
+  .receipt-row-val.discount {
+    color: #10b981;
+    font-weight: 700;
+  }
+  .receipt-row-val.tax-ship {
+    color: var(--text-secondary);
+  }
+  .receipt-total-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 0.5rem;
+    padding: 0.85rem 1.1rem;
+    background: rgba(16, 185, 129, 0.08);
+    border: 1px solid rgba(16, 185, 129, 0.25);
+    border-radius: 12px;
+  }
+  .receipt-total-label {
+    font-weight: 700;
+    font-size: 0.95rem;
+    color: var(--text-primary);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .receipt-total-val {
+    font-weight: 800;
+    font-size: 1.15rem;
+    color: #10b981;
   }
 
   /* 1-Click Direct Checkout Button */
@@ -672,37 +755,136 @@ function renderTextWithMarkdownLinks(rawText, container) {
   }
 }
 
+function renderItemizedReceiptCard(rawReceiptText, container) {
+  let cleanText = rawReceiptText
+    .replace(/```(?:markdown)?/gi, "")
+    .replace(/[─━-]{5,}/g, "")
+    .trim();
+
+  let storeMatch = cleanText.match(/\(([^)]+)\)/);
+  let storeTitle = storeMatch ? storeMatch[1].trim() : "Itemized Out-of-Pocket Receipt";
+
+  const lines = cleanText.split("\n").map(l => l.trim()).filter(Boolean);
+
+  const lineItems = [];
+  let finalNetVal = "";
+
+  lines.forEach(line => {
+    if (line.match(/ITEMIZED OUT-OF-POCKET RECEIPT/i)) return;
+
+    const kvMatch = line.match(/^([^\:\n]+):\s*([\+\-]?\$?\d[\d,.]*\b.*)$/i);
+    if (kvMatch) {
+      let label = kvMatch[1].trim();
+      let val = kvMatch[2].trim();
+
+      if (label.match(/Final|Net|Out-of-Pocket/i) || line.includes("💰")) {
+        finalNetVal = val;
+      } else {
+        let isDiscount = val.startsWith("-") || label.match(/Discount|Reward|Perk|Cashback/i);
+        let isTaxShip = val.startsWith("+") || label.match(/Tax|Shipping|Delivery/i);
+        lineItems.push({ label, val, isDiscount, isTaxShip });
+      }
+    }
+  });
+
+  const details = el("details", "receipt-card");
+  details.open = true;
+
+  const header = el("summary", "receipt-header");
+
+  const titleDiv = el("div", "receipt-title");
+  titleDiv.innerHTML = `<span>🧾</span> <span>${storeTitle}</span>`;
+
+  const rightDiv = el("div");
+  rightDiv.style.display = "flex";
+  rightDiv.style.alignItems = "center";
+  rightDiv.style.gap = "0.75rem";
+
+  if (finalNetVal) {
+    const badge = el("span", "receipt-price-badge", finalNetVal);
+    rightDiv.appendChild(badge);
+  }
+
+  const toggleIcon = el("span", "material-symbols-outlined receipt-toggle-icon", "expand_more");
+  rightDiv.appendChild(toggleIcon);
+
+  header.appendChild(titleDiv);
+  header.appendChild(rightDiv);
+
+  const body = el("div", "receipt-body");
+
+  lineItems.forEach(item => {
+    const row = el("div", "receipt-row");
+
+    const lbl = el("span", "receipt-row-label");
+    lbl.textContent = item.label;
+
+    const val = el("span", "receipt-row-val");
+    if (item.isDiscount) val.classList.add("discount");
+    else if (item.isTaxShip) val.classList.add("tax-ship");
+    val.textContent = item.val;
+
+    row.appendChild(lbl);
+    row.appendChild(val);
+    body.appendChild(row);
+  });
+
+  if (finalNetVal) {
+    const totalRow = el("div", "receipt-total-row");
+
+    const tLbl = el("span", "receipt-total-label");
+    tLbl.innerHTML = `<span>💰</span> <span>Final Net Out-of-Pocket</span>`;
+
+    const tVal = el("span", "receipt-total-val", finalNetVal);
+
+    totalRow.appendChild(tLbl);
+    totalRow.appendChild(tVal);
+    body.appendChild(totalRow);
+  }
+
+  details.appendChild(header);
+  details.appendChild(body);
+  container.appendChild(details);
+}
+
 function renderFormattedContent(textStr, container) {
   if (!textStr) return;
   const text = formatStoreIcons(textStr);
 
-  const receiptRegex = /(🧾\s*ITEMIZED OUT-OF-POCKET RECEIPT[\s\S]*?💰\s*FINAL NET OUT-OF-POCKET:?\s*\$?\d+(?:\.\d{2})?)/gi;
-  const parts = text.split(receiptRegex);
+  const receiptRegex = /(?:```\s*)?(🧾\s*ITEMIZED OUT-OF-POCKET RECEIPT[\s\S]*?)(?:```|$)/gi;
 
-  parts.forEach(part => {
-    if (!part) return;
+  let lastIndex = 0;
+  let match;
+  let foundAnyReceipt = false;
 
-    if (part.match(/🧾\s*ITEMIZED OUT-OF-POCKET RECEIPT/i)) {
-      const details = el("details", "receipt-accordion");
-      details.open = true;
-
-      const totalMatch = part.match(/💰\s*FINAL NET OUT-OF-POCKET:?\s*(\$?\d+(?:\.\d{2})?)/i);
-      const totalStr = totalMatch ? ` — Final Net: ${totalMatch[1]}` : "";
-
-      const summary = el("summary", "receipt-summary", `🧾 Itemized Out-of-Pocket Receipt${totalStr} (Click to toggle)`);
-      const body = el("div", "receipt-body");
-
-      renderTextWithMarkdownLinks(part, body);
-
-      details.appendChild(summary);
-      details.appendChild(body);
-      container.appendChild(details);
-    } else {
+  while ((match = receiptRegex.exec(text)) !== null) {
+    foundAnyReceipt = true;
+    const textBefore = text.substring(lastIndex, match.index);
+    if (textBefore.trim()) {
       const wrapper = el("div", "formatted-text-block");
-      renderTextWithMarkdownLinks(part, wrapper);
+      renderTextWithMarkdownLinks(textBefore, wrapper);
       container.appendChild(wrapper);
     }
-  });
+
+    const receiptBlock = match[1];
+    renderItemizedReceiptCard(receiptBlock, container);
+
+    lastIndex = receiptRegex.lastIndex;
+    if (match.index === receiptRegex.lastIndex) receiptRegex.lastIndex++;
+  }
+
+  if (!foundAnyReceipt) {
+    const wrapper = el("div", "formatted-text-block");
+    renderTextWithMarkdownLinks(text, wrapper);
+    container.appendChild(wrapper);
+  } else {
+    const textAfter = text.substring(lastIndex);
+    if (textAfter.trim()) {
+      const wrapper = el("div", "formatted-text-block");
+      renderTextWithMarkdownLinks(textAfter, wrapper);
+      container.appendChild(wrapper);
+    }
+  }
 }
 
 function extractA2UIFromText(textStr) {
