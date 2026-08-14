@@ -1,0 +1,9 @@
+.gcloudignore
+.git
+.gitignore
+*.gif
+*.webm
+*.mp4
+.venv/
+__pycache__/
+tests/

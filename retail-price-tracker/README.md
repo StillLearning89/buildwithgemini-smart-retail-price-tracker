@@ -1,6 +1,6 @@
 # 🛒 Smart Retail Price Tracker & Comparison Agent
 
-> **One-liner:** A conversational agent that helps shoppers find the best deals, compare prices across top retail platforms (Amazon, Walmart, Costco, Best Buy, Google Store), calculate net checkout prices with memberships & taxes, and generate visual deal assets.
+> **One-liner:** An intelligent conversational shopping agent built with Google ADK that searches multi-retailer deals, calculates net out-of-pocket costs with stacked credit card cashback perks, renders itemized receipts with 1-click checkout links, and generates AI promotional videos via Google's Omni model.
 
 <div align="center">
 
@@ -10,38 +10,42 @@
 
 ---
 
-## 🌟 Overview
+## 🌟 Executive Summary & Key Features
 
-The **Smart Retail Price Tracker & Comparison Agent** is built on Google Cloud's **Agent Development Kit (ADK)** and deployed to **Agent Runtime**. It serves as an intelligent shopping companion that goes beyond basic price searching by accounting for store membership discounts (e.g. Costco Member, Amazon Prime), taxes, shipping costs, and price match policies.
+The **Smart Retail Price Tracker & Comparison Agent** transforms online price discovery by solving real-world shopper friction. Rather than displaying raw MSRP sticker prices, the agent calculates true **out-of-pocket costs** by layering local sales tax, shipping fees, store membership discounts, and credit card cashback perks.
 
-In addition to calculating net savings, the agent generates promotional deal graphics and AI product videos powered by Google's **Omni Model** (`gemini-omni-flash-preview`).
+### 🚀 Key Features
+
+1. 🔍 **Multi-Platform Deal Search**: Real-time comparison across **Costco**, **Best Buy**, **Amazon**, **Walmart**, **Google Store**, and **Target**.
+2. 💳 **Stacked Credit Card Cashback Perks**: Automatically calculates and deducts card rewards:
+   - **Prime Visa**: 5% cashback on Amazon
+   - **Costco Anywhere Visa**: 2% cashback on Costco
+   - **Target Circle Card**: 5% savings on Target
+   - **5% Category Cards** *(Chase Freedom Flex / Discover IT)*
+   - **2% Flat Cards** *(Citi Double Cash)*
+3. 🧾 **Itemized Out-of-Pocket Receipts**: Generates structured collapsible receipts showing Base Price, Store Member Rewards, Card Cashback, Estimated Tax, Shipping, and Final Net Price.
+4. 🛒 **1-Click Direct Checkout Links**: Deep links directly to retailer product pages (`[ 🛒 Direct Checkout at Store ](url)`).
+5. 🧠 **Cross-Session Memory Bank**: Remembers user zip code, store memberships (Costco Executive, Prime, Google One), card perks, and watchlists across conversations.
+6. 📖 **Grounded Retail Policy RAG**: Answers return window, price match guarantee, and warranty questions grounded in official store policy documents.
+7. 🎨 **AI Promotional Image Generation**: Creates visual deal graphics and banners using Imagen 3 (`gemini-3.1-flash-lite-image`).
+8. 🎬 **Omni Model Video Generation**: Generates 1080p promotional video clips using Google's Omni model (`gemini-omni-flash-preview`) via the Interactions API, saved to Google Cloud Storage.
+9. 🪟 **Interactive A2UI Cards**: Renders dynamic micro-UI components (cards, columns, rows) in both ADK Web UI and the custom Cloud Run frontend.
 
 ---
 
-## ✨ Key Features
+## ☁️ Google Cloud Tools & Agent Architecture
 
-- 🏷️ **Multi-Platform Price Search & Comparison**: Searches deals across top retailers (Costco, Best Buy, Amazon, Walmart, Google Store).
-- 🧮 **Net Price Calculator**: Calculates net checkout cost taking into account user memberships, estimated sales tax, shipping fees, and store discounts.
-- 🪟 **Interactive A2UI Cards & Comparison Tables**: Generates rich Agent-Driven UI cards and side-by-side product comparison tables directly in the chat UI.
-- 🖼️ **Generative Promotional Image Graphics**: Creates visual deal cards and product banners using Imagen 3.
-- 🎬 **AI Promotional Video Generation**: Generates 1080p promotional video clips for deals using Google's Omni model (`gemini-omni-flash-preview`) via the Interactions API, saving artifacts and serving them via public Cloud Storage URLs.
-- 🧠 **Cross-Session Shopper Memory**: Remembers user store memberships (e.g., Prime, Costco), preferred brands, budget limits, and price alert thresholds.
-- 📖 **Grounded Policy RAG**: Answers questions about store return windows, price match guarantees, and warranty terms grounded in retail policy documents.
-
----
-
-## ☁️ Google Cloud Infrastructure & Tools Used
-
-| Tool / Technology | Purpose & Usage in Agent |
+| Tool / Technology | Role & Purpose in Project |
 | :--- | :--- |
-| **Vertex AI Memory Bank** | Manages cross-session long-term memory for shopper profiles, store memberships, and budget preferences. |
-| **Google Cloud Storage (GCS)** | Public bucket storage (`retail-price-tracker-qwiklabs-gcp-03-47433e0ab402`) for generated product videos and deal graphics. |
-| **Firestore** | Persistent structured storage for tracked deals and store catalog records. |
-| **Vertex AI RAG Engine** | Grounded retrieval for retail store return windows and price match policies. |
+| **Gemini 3.6 Flash** | Core orchestration model driving reasoning, tool dispatch, and structured output formatting. |
+| **Vertex AI Agent Runtime (Reasoning Engine)** | Managed serverless hosting target for the ADK agent backend. |
+| **Vertex AI Memory Bank** | Long-term memory persistence across user sessions (zip code, memberships, cards). |
+| **Vertex AI RAG Engine** | Vector retrieval corpus (`ragCorpora`) over official store policy documentation for grounded answers. |
+| **Google Cloud Storage (GCS)** | Public storage bucket (`retail-price-tracker-qwiklabs-gcp-03-47433e0ab402`) for generated videos and deal images. |
 | **Google Omni Model (`gemini-omni-flash-preview`)** | Generates short promotional deal videos in the `global` region via the Interactions API. |
-| **Imagen 3** | Generates visual promotional graphics and deal summary cards. |
-| **A2UI (Agent-Driven UI)** | Emits structured JSON (`application/json+a2ui`) to render dynamic interactive cards and tables. |
-| **ADK & Agent Runtime** | Core agent reasoning loop deployed via `agents-cli`. |
+| **Imagen 3** | Generates promotional product graphics. |
+| **A2UI Protocol** | Standardized JSON protocol (`application/json+a2ui`) for rendering native UI cards in web frontends. |
+| **Cloud Run** | Serverless hosting for the FastAPI proxy and responsive web frontend. |
 
 ---
 
@@ -50,57 +54,115 @@ In addition to calculating net savings, the agent generates promotional deal gra
 ```text
 retail-price-tracker/
 ├── app/
-│   ├── agent.py               # Root agent, tools (video, image, search, math), memory & system prompt
-│   ├── fast_api_app.py        # FastAPI server & ADK Web UI
-│   └── app_utils/             # A2UI helpers, memory tools, and RAG integration
-├── frontend/                  # FastAPI proxy & custom web chat frontend
-├── docs/                      # Retail policy documents for RAG grounding
+│   ├── agent.py               # Root ADK agent, tools (search, net calc, Omni video, Imagen, RAG, memory)
+│   ├── fast_api_app.py        # Local FastAPI app and A2A server integration
+│   ├── a2ui_utils.py          # A2UI callback and metadata wrapper
+│   └── app_utils/             # Reasoning engine adapter, A2A routes, and service bindings
+├── frontend/                  # FastAPI proxy & responsive HTML/CSS/JS frontend
+│   ├── main.py                # A2A proxy server talking to Agent Runtime
+│   ├── static/index.html      # Responsive Google Gemini-style Chat UI
+│   └── Dockerfile             # Container configuration for Cloud Run
+├── docs/                      # Retail policy guide for RAG grounding
+├── deployment_metadata.json   # Remote Agent Runtime deployment reference
+├── Dockerfile                 # Backend container definition
 ├── demo.gif                   # Loop demo recording
-├── retail_price_tracker_demo.webm # Original screen recording
-└── pyproject.toml             # Python dependencies
+└── pyproject.toml             # Dependencies (ADK, google-genai, a2a, fastapi)
 ```
 
 ---
 
-## 🚀 Quick Start
+## 🛠️ Developer Launch & Deployment Guide
 
-### 1. Installation
+### 1. Prerequisites & Environment Setup
 
-Ensure you have `uv` and `google-agents-cli` installed:
+Ensure you have Python 3.12, `uv`, and `gcloud` installed:
 
 ```bash
-# Install dependencies
-agents-cli install
+# Clone the repository
+git clone https://github.com/StillLearning89/buildwithgemini-smart-retail-price-tracker.git
+cd buildwithgemini-smart-retail-price-tracker/retail-price-tracker
+
+# Create virtual environment and install dependencies
+uv venv .venv
+source .venv/bin/activate
+uv sync
 ```
 
-### 2. Local Development & Testing
-
-Launch the local ADK Playground web server:
+Authenticate with Google Cloud:
 
 ```bash
+gcloud auth login
+gcloud auth application-default login
+gcloud config set project YOUR_GCP_PROJECT_ID
+```
+
+---
+
+### 2. Local Backend Execution
+
+Launch the agent backend locally with `agents-cli`:
+
+```bash
+# Interactive CLI mode
+agents-cli run
+
+# Playground Web UI mode
 agents-cli playground
 ```
 
 Or run the FastAPI app directly:
 
 ```bash
-python -m app.fast_api_app
+PYTHONPATH=. uv run uvicorn app.fast_api_app:app --host 127.0.0.1 --port 8000
+```
+Open `http://127.0.0.1:8000/dev-ui/?app=app` in your browser.
+
+---
+
+### 3. Local Frontend Execution
+
+Run the custom chat UI proxy locally:
+
+```bash
+cd frontend
+export AGENT_ENGINE_RESOURCE_NAME="projects/YOUR_PROJECT/locations/us-central1/reasoningEngines/YOUR_ENGINE_ID"
+export AGENT_DIRECTORY="app"
+python main.py
+```
+Open `http://localhost:8080` in your browser.
+
+---
+
+### 4. Deploying to Production (Agent Runtime & Cloud Run)
+
+#### Deploy the Agent Backend to Vertex AI Agent Runtime:
+```bash
+agents-cli deploy --project YOUR_GCP_PROJECT_ID --no-confirm-project
 ```
 
-Navigate to `http://localhost:8000/dev-ui/?app=app` to interact with the agent.
+#### Deploy the Frontend Proxy to Cloud Run:
+```bash
+cd frontend
+gcloud run deploy retail-price-tracker-frontend \
+  --source . \
+  --region us-central1 \
+  --allow-unauthenticated \
+  --set-env-vars "AGENT_ENGINE_RESOURCE_NAME=projects/YOUR_PROJECT/locations/us-central1/reasoningEngines/YOUR_ENGINE_ID,AGENT_DIRECTORY=app" \
+  --project YOUR_GCP_PROJECT_ID
+```
 
 ---
 
 ## 🧪 Evaluation
 
-To run evaluations against the sample dataset:
+Run the automated evaluation suite against test query datasets:
 
 ```bash
 agents-cli eval
 ```
 
-Sample query tested:
-> *"Find me the best price for a 65-inch OLED TV under $1500 including my Costco membership discount."*
+Sample query verified:
+> *"Find me the best price for a 65-inch OLED TV under $1500 including my Costco membership discount and Costco Visa card cashback."*
 
 ---
 
