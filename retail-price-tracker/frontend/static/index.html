@@ -706,46 +706,56 @@ function renderFormattedContent(textStr, container) {
 }
 
 function extractA2UIFromText(textStr) {
-  if (!textStr || typeof textStr !== "string") return { cleanText: textStr, a2uiMsgs: [] };
+  if (!textStr || typeof textStr !== "string") return { cleanText: "", a2uiMsgs: [] };
 
   const a2uiMsgs = [];
   const a2uiKeys = ["beginRendering", "surfaceUpdate", "dataModelUpdate", "deleteSurface"];
   let cleanText = textStr;
 
-  if (cleanText.includes("<a2a_datapart_json>")) {
-    cleanText = cleanText.replace(/<a2a_datapart_json>([\s\S]*?)(?:<\/a2a_datapart_json>|<a2a_datapart_json>|$)/g, (match, jsonStr) => {
-      try {
-        const parsed = JSON.parse(jsonStr.trim());
-        const data = parsed.data || parsed;
+  // 1. Handle <a2ui-json> and <a2a_datapart_json> wrapper tags
+  const tagRegex = /<(a2ui-json|a2a_datapart_json)>([\s\S]*?)(?:<\/\1>|$)/gi;
+  cleanText = cleanText.replace(tagRegex, (match, tag, jsonStr) => {
+    const trimmedJson = jsonStr.trim();
+    if (!trimmedJson) return "";
+    try {
+      const parsed = JSON.parse(trimmedJson);
+      const items = Array.isArray(parsed) ? parsed : [parsed];
+      let matchedAny = false;
+      items.forEach(item => {
+        const data = item.data || item;
         if (data && typeof data === "object" && a2uiKeys.some(k => k in data)) {
           a2uiMsgs.push(data);
-          return "";
+          matchedAny = true;
         }
+      });
+      if (matchedAny) return "";
+    } catch (e) {}
+    return match;
+  });
+
+  // 2. Handle untagged JSON arrays or objects containing A2UI keys
+  if (a2uiKeys.some(k => cleanText.includes(k))) {
+    const jsonBlockRegex = /(?:```(?:json)?\s*)?(\[\s*\{[\s\S]*?\}\s*\]|\{\s*"[^"]+"\s*:[\s\S]*?\})(?:\s*```)?/g;
+    cleanText = cleanText.replace(jsonBlockRegex, (match, jsonCandidate) => {
+      try {
+        const parsed = JSON.parse(jsonCandidate.trim());
+        const items = Array.isArray(parsed) ? parsed : [parsed];
+        let matchedAny = false;
+        items.forEach(item => {
+          const data = item.data || item;
+          if (data && typeof data === "object" && a2uiKeys.some(k => k in data)) {
+            a2uiMsgs.push(data);
+            matchedAny = true;
+          }
+        });
+        if (matchedAny) return "";
       } catch (e) {}
       return match;
     });
   }
 
-  const trimmed = cleanText.trim();
-  if (a2uiKeys.some(k => trimmed.includes(k))) {
-    let jsonTarget = trimmed;
-    if (jsonTarget.startsWith("```")) {
-      jsonTarget = jsonTarget.replace(/^```[a-z]*\n?/, "").replace(/```$/, "").trim();
-    }
-    try {
-      const parsed = JSON.parse(jsonTarget);
-      const items = Array.isArray(parsed) ? parsed : [parsed];
-      let foundAny = false;
-      items.forEach(item => {
-        const data = item.data || item;
-        if (data && typeof data === "object" && a2uiKeys.some(k => k in data)) {
-          a2uiMsgs.push(data);
-          foundAny = true;
-        }
-      });
-      if (foundAny) cleanText = "";
-    } catch (e) {}
-  }
+  // Clean up any remaining trailing markdown fences or horizontal dividers
+  cleanText = cleanText.replace(/```(?:json)?\s*```/gi, "").trim();
 
   return { cleanText: cleanText.trim(), a2uiMsgs };
 }

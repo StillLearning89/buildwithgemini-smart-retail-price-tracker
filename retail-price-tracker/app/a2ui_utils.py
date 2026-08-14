@@ -225,16 +225,22 @@ def a2ui_callback(
     if not llm_response.content or not llm_response.content.parts:
         return None
 
+    a2ui_found = False
+    final_parts: list[types.Part] = []
+
     for part in llm_response.content.parts:
-        text = (part.text or "").strip()
+        text = part.text or ""
         if not text:
+            final_parts.append(part)
             continue
         # Cheap gate: only touch parts that look like A2UI, leave prose alone.
         if not any(k in text for k in _A2UI_KEYS):
+            final_parts.append(part)
             continue
 
         messages = _extract_a2ui_messages(text)
         if not messages:
+            final_parts.append(part)
             continue
 
         # Turn un-fetchable <Image> URLs into a text note (no broken-image icons).
@@ -244,16 +250,29 @@ def a2ui_callback(
             # We recognized A2UI but couldn't recover a renderable surface — the
             # model emitted invalid JSON, a missing surface body, or an undefined
             # root/child reference. Return clean text instead of a blank card.
-            return LlmResponse(
-                content=types.Content(
-                    role="model", parts=[types.Part(text=_FALLBACK_TEXT)]
-                )
+            final_parts.append(types.Part(text=_FALLBACK_TEXT))
+        else:
+            a2ui_found = True
+            # Strip out A2UI JSON blocks and tags to leave clean prose
+            prose = re.sub(
+                r"<(?:a2ui-json|a2a_datapart_json)>[\s\S]*?(?:</(?:a2ui-json|a2a_datapart_json)>|$)",
+                "",
+                text,
+                flags=re.IGNORECASE,
             )
+            # Remove any raw JSON code block fences
+            prose = re.sub(r"```(?:json)?[\s\S]*?```", "", prose).strip()
+            if prose:
+                final_parts.append(types.Part(text=prose))
 
-        new_parts = [_wrap_a2ui_part(m) for m in messages]
+            for m in messages:
+                final_parts.append(_wrap_a2ui_part(m))
+
+    if a2ui_found:
         return LlmResponse(
-            content=types.Content(role="model", parts=new_parts),
+            content=types.Content(role="model", parts=final_parts),
             custom_metadata={"a2a:response": "true"},
         )
 
     return None
+

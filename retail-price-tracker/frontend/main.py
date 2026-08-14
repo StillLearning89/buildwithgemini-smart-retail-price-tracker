@@ -114,61 +114,85 @@ async def _get_card(client: httpx.AsyncClient) -> AgentCard:
     return _card
 
 
-def _try_parse_a2ui_text(text: str) -> list[dict]:
-    """Extract A2UI message dicts if text contains <a2a_datapart_json> or raw A2UI JSON."""
+def _try_parse_a2ui_text(text: str) -> tuple[str, list[dict]]:
+    """Extract (clean_text, a2ui_messages) if text contains <a2ui-json>, <a2a_datapart_json>, or raw A2UI JSON."""
     if not text or not isinstance(text, str):
-        return []
+        return "", []
 
     a2ui_keys = ("beginRendering", "surfaceUpdate", "dataModelUpdate", "deleteSurface")
     messages = []
+    clean_text = text
 
-    # Check for <a2a_datapart_json> wrapper tags
-    if "<a2a_datapart_json>" in text:
-        matches = re.findall(
-            r"<a2a_datapart_json>(.*?)(?:</a2a_datapart_json>|<a2a_datapart_json>|$)",
-            text,
-            re.DOTALL,
-        )
-        for m in matches:
-            m_str = m.strip()
+    # 1. Check for <a2ui-json> or <a2a_datapart_json> wrapper tags
+    tag_pattern = r"<(a2ui-json|a2a_datapart_json)>(.*?)(?:</\1>|<\1>|$)"
+    matches = re.findall(tag_pattern, text, re.DOTALL | re.IGNORECASE)
+    if matches:
+        for tag, payload in matches:
+            m_str = payload.strip()
             if not m_str:
                 continue
             try:
                 data = json.loads(m_str)
-                if isinstance(data, dict):
-                    inner = data.get("data", data)
-                    if isinstance(inner, dict) and any(
-                        k in inner for k in a2ui_keys
-                    ):
-                        messages.append(inner)
+                items = data if isinstance(data, list) else [data]
+                for item in items:
+                    if isinstance(item, dict):
+                        inner = item.get("data", item)
+                        if isinstance(inner, dict) and any(
+                            k in inner for k in a2ui_keys
+                        ):
+                            messages.append(inner)
             except Exception:
                 pass
 
-    # Check if text is raw JSON array/object containing A2UI keys
-    stripped = text.strip()
-    if not messages and any(k in stripped for k in a2ui_keys):
-        if stripped.startswith("```"):
-            lines = stripped.split("\n")
-            if lines[0].startswith("```"):
-                lines = lines[1:]
-            if lines and lines[-1].strip() == "```":
-                lines = lines[:-1]
-            stripped = "\n".join(lines).strip()
+        # Strip out tag blocks from clean_text
+        clean_text = re.sub(
+            r"<(a2ui-json|a2a_datapart_json)>[\s\S]*?(?:</\1>|$)",
+            "",
+            clean_text,
+            flags=re.IGNORECASE,
+        )
 
-        try:
-            parsed = json.loads(stripped)
-            items = parsed if isinstance(parsed, list) else [parsed]
-            for item in items:
-                if isinstance(item, dict):
-                    inner = item.get("data", item)
-                    if isinstance(inner, dict) and any(
-                        k in inner for k in a2ui_keys
-                    ):
-                        messages.append(inner)
-        except Exception:
-            pass
+    # 2. Check for untagged embedded JSON array or object containing A2UI keys
+    if not messages and any(k in text for k in a2ui_keys):
+        decoder = json.JSONDecoder()
+        idx = 0
+        n = len(text)
+        extracted_spans = []
+        while idx < n:
+            while idx < n and text[idx] not in "{[":
+                idx += 1
+            if idx >= n:
+                break
+            try:
+                val, end = decoder.raw_decode(text, idx)
+                items = val if isinstance(val, list) else [val]
+                has_a2ui = False
+                for item in items:
+                    if isinstance(item, dict):
+                        inner = item.get("data", item)
+                        if isinstance(inner, dict) and any(
+                            k in inner for k in a2ui_keys
+                        ):
+                            messages.append(inner)
+                            has_a2ui = True
+                if has_a2ui:
+                    extracted_spans.append((idx, end))
+                idx = max(end, idx + 1)
+            except Exception:
+                idx += 1
 
-    return messages
+        if extracted_spans:
+            last = 0
+            pieces = []
+            for start, end in extracted_spans:
+                pieces.append(clean_text[last:start])
+                last = end
+            pieces.append(clean_text[last:])
+            clean_text = "".join(pieces)
+
+    # Clean up leftover markdown fences and trailing whitespace
+    clean_text = re.sub(r"```(?:json)?\s*```", "", clean_text).strip()
+    return clean_text, messages
 
 
 def _extract_parts(parts: list) -> list[dict]:
@@ -184,12 +208,12 @@ def _extract_parts(parts: list) -> list[dict]:
         root = getattr(p, "root", p)
         if isinstance(root, TextPart) and getattr(root, "text", None):
             txt = root.text
-            a2ui_msgs = _try_parse_a2ui_text(txt)
+            clean_txt, a2ui_msgs = _try_parse_a2ui_text(txt)
+            if clean_txt:
+                out.append({"kind": "text", "text": clean_txt})
             if a2ui_msgs:
                 for msg in a2ui_msgs:
                     out.append({"kind": "a2ui", "data": msg})
-            else:
-                out.append({"kind": "text", "text": txt})
         elif getattr(root, "data", None) is not None:
             meta = getattr(root, "metadata", None) or {}
             mime = meta.get("mimeType") if isinstance(meta, dict) else None
