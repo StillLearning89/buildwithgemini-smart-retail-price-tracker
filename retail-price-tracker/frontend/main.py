@@ -24,7 +24,9 @@ Run:
   python main.py                 # -> http://localhost:8080
 """
 
+import json
 import os
+import re
 import uuid
 
 import google.auth
@@ -45,11 +47,11 @@ from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 
-RESOURCE = os.environ["AGENT_ENGINE_RESOURCE_NAME"]
+RESOURCE = os.environ.get("AGENT_ENGINE_RESOURCE_NAME", "projects/demo/locations/us-central1/reasoningEngines/demo")
 # The agent's app directory (matches agent_directory in agents-cli-manifest.yaml).
 AGENT_DIRECTORY = os.environ.get("AGENT_DIRECTORY", "app")
 # Location is embedded in the resource name: projects/<p>/locations/<loc>/reasoningEngines/<id>.
-LOCATION = RESOURCE.split("/locations/")[1].split("/")[0]
+LOCATION = RESOURCE.split("/locations/")[1].split("/")[0] if "/locations/" in RESOURCE else "us-central1"
 
 # A2A endpoint for an Agent Runtime deployment, via the Agent Engine HTTP
 # passthrough. The card lives at the well-known path under this base.
@@ -112,6 +114,63 @@ async def _get_card(client: httpx.AsyncClient) -> AgentCard:
     return _card
 
 
+def _try_parse_a2ui_text(text: str) -> list[dict]:
+    """Extract A2UI message dicts if text contains <a2a_datapart_json> or raw A2UI JSON."""
+    if not text or not isinstance(text, str):
+        return []
+
+    a2ui_keys = ("beginRendering", "surfaceUpdate", "dataModelUpdate", "deleteSurface")
+    messages = []
+
+    # Check for <a2a_datapart_json> wrapper tags
+    if "<a2a_datapart_json>" in text:
+        matches = re.findall(
+            r"<a2a_datapart_json>(.*?)(?:</a2a_datapart_json>|<a2a_datapart_json>|$)",
+            text,
+            re.DOTALL,
+        )
+        for m in matches:
+            m_str = m.strip()
+            if not m_str:
+                continue
+            try:
+                data = json.loads(m_str)
+                if isinstance(data, dict):
+                    inner = data.get("data", data)
+                    if isinstance(inner, dict) and any(
+                        k in inner for k in a2ui_keys
+                    ):
+                        messages.append(inner)
+            except Exception:
+                pass
+
+    # Check if text is raw JSON array/object containing A2UI keys
+    stripped = text.strip()
+    if not messages and any(k in stripped for k in a2ui_keys):
+        if stripped.startswith("```"):
+            lines = stripped.split("\n")
+            if lines[0].startswith("```"):
+                lines = lines[1:]
+            if lines and lines[-1].strip() == "```":
+                lines = lines[:-1]
+            stripped = "\n".join(lines).strip()
+
+        try:
+            parsed = json.loads(stripped)
+            items = parsed if isinstance(parsed, list) else [parsed]
+            for item in items:
+                if isinstance(item, dict):
+                    inner = item.get("data", item)
+                    if isinstance(inner, dict) and any(
+                        k in inner for k in a2ui_keys
+                    ):
+                        messages.append(inner)
+        except Exception:
+            pass
+
+    return messages
+
+
 def _extract_parts(parts: list) -> list[dict]:
     """Turn A2A response parts into structured parts for the chat UI.
 
@@ -124,12 +183,31 @@ def _extract_parts(parts: list) -> list[dict]:
     for p in parts:
         root = getattr(p, "root", p)
         if isinstance(root, TextPart) and getattr(root, "text", None):
-            out.append({"kind": "text", "text": root.text})
+            txt = root.text
+            a2ui_msgs = _try_parse_a2ui_text(txt)
+            if a2ui_msgs:
+                for msg in a2ui_msgs:
+                    out.append({"kind": "a2ui", "data": msg})
+            else:
+                out.append({"kind": "text", "text": txt})
         elif getattr(root, "data", None) is not None:
             meta = getattr(root, "metadata", None) or {}
             mime = meta.get("mimeType") if isinstance(meta, dict) else None
+            data_val = root.data
+            if isinstance(data_val, (bytes, str)):
+                try:
+                    data_val = json.loads(data_val)
+                except Exception:
+                    pass
             if mime == _A2UI_MIME:
-                out.append({"kind": "a2ui", "data": root.data})
+                out.append({"kind": "a2ui", "data": data_val})
+            else:
+                if isinstance(data_val, dict) and any(
+                    k in data_val for k in ("beginRendering", "surfaceUpdate", "dataModelUpdate", "deleteSurface")
+                ):
+                    out.append({"kind": "a2ui", "data": data_val})
+                else:
+                    out.append({"kind": "text", "text": str(data_val)})
         elif isinstance(root, FilePart):
             uri = getattr(getattr(root, "file", None), "uri", None)
             if uri:

@@ -323,6 +323,76 @@
   button.submit-btn:hover {
     opacity: 0.92;
     transform: translateY(-1px);
+  }  /* Collapsible Itemized Receipt Accordion */
+  .receipt-accordion {
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    background: var(--card-bg);
+    margin: 0.8rem 0;
+    overflow: hidden;
+    box-shadow: var(--shadow-sm);
+    transition: all 0.2s ease;
+  }
+  .receipt-accordion[open] {
+    box-shadow: var(--shadow-md);
+  }
+  .receipt-summary {
+    padding: 0.9rem 1.1rem;
+    font-weight: 600;
+    font-size: 0.925rem;
+    color: var(--gemini-blue);
+    background: var(--pill-bg);
+    cursor: pointer;
+    user-select: none;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .receipt-summary:hover {
+    background: var(--pill-hover);
+  }
+  .receipt-body {
+    padding: 1rem 1.25rem;
+    font-family: monospace, 'Inter', sans-serif;
+    font-size: 0.875rem;
+    line-height: 1.6;
+    border-top: 1px solid var(--border);
+    white-space: pre-wrap;
+    background: var(--bg);
+  }
+
+  /* 1-Click Direct Checkout Button */
+  .checkout-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: var(--gemini-gradient);
+    color: #ffffff !important;
+    font-weight: 600;
+    font-size: 0.875rem;
+    padding: 0.65rem 1.2rem;
+    border-radius: 20px;
+    text-decoration: none !important;
+    box-shadow: 0 3px 10px rgba(26, 115, 232, 0.25);
+    transition: all 0.2s ease;
+    margin: 0.4rem 0;
+  }
+  .checkout-btn:hover {
+    opacity: 0.92;
+    transform: translateY(-1px);
+    box-shadow: 0 5px 15px rgba(26, 115, 232, 0.35);
+  }
+
+  .inline-link {
+    color: var(--gemini-blue);
+    text-decoration: underline;
+    font-weight: 500;
+  }
+
+  .formatted-text-block {
+    margin: 0.3rem 0;
+    white-space: pre-wrap;
+    word-break: break-word;
   }
 
   /* --- A2UI component styles --- */
@@ -350,7 +420,7 @@
   .a2text.a2-h4 { font-size: 0.95rem; font-weight: 600; }
   .a2text.a2-caption { font-size: 0.825rem; color: var(--text-secondary); }
   .a2divider { border: none; border-top: 1px solid var(--border); margin: 0.65rem 0; width: 100%; }
-  
+
   .a2img {
     width: 100%;
     max-height: 280px;
@@ -396,7 +466,7 @@
 
   <!-- LEFT SIDEBAR CONTROLS WITH GEMINI GRADIENT BUTTONS -->
   <div id="left-sidebar">
-    
+
     <!-- Store Filters Section -->
     <div class="sidebar-section">
       <div class="sidebar-title">
@@ -541,6 +611,145 @@ function childIds(props) {
 
 function iconName(n) { return String(n || "").replace(/([a-z0-9])([A-Z])/g, "$1_$2").replace(/\s+/g, "_").toLowerCase(); }
 
+function appendFormattedLines(str, container) {
+  const span = el("span");
+  const boldRegex = /\*\*([^*]+)\*\*/g;
+  let lastIdx = 0;
+  let match;
+  while ((match = boldRegex.exec(str)) !== null) {
+    if (match.index > lastIdx) {
+      span.appendChild(document.createTextNode(str.substring(lastIdx, match.index)));
+    }
+    const strong = el("strong", null, match[1]);
+    span.appendChild(strong);
+    lastIdx = boldRegex.lastIndex;
+  }
+  if (lastIdx < str.length) {
+    span.appendChild(document.createTextNode(str.substring(lastIdx)));
+  }
+  container.appendChild(span);
+}
+
+function renderTextWithMarkdownLinks(rawText, container) {
+  const linkRegex = /\[([^\]]+)\]\((https?:\/\/[^\s\)]+)\)/g;
+  let lastIndex = 0;
+  let match;
+
+  while ((match = linkRegex.exec(rawText)) !== null) {
+    const textBefore = rawText.substring(lastIndex, match.index);
+    if (textBefore) {
+      appendFormattedLines(textBefore, container);
+    }
+
+    const linkText = match[1];
+    const linkUrl = match[2];
+
+    if (linkText.includes("Checkout") || linkText.includes("🛒")) {
+      const btn = el("a", "checkout-btn");
+      btn.href = linkUrl;
+      btn.target = "_blank";
+      btn.rel = "noopener noreferrer";
+      btn.textContent = linkText;
+      const icon = el("span", "material-symbols-outlined", "open_in_new");
+      icon.style.fontSize = "1rem";
+      icon.style.color = "#fff";
+      btn.appendChild(icon);
+      container.appendChild(btn);
+    } else {
+      const a = el("a", "inline-link", linkText);
+      a.href = linkUrl;
+      a.target = "_blank";
+      a.rel = "noopener noreferrer";
+      container.appendChild(a);
+    }
+
+    lastIndex = linkRegex.lastIndex;
+  }
+
+  const textAfter = rawText.substring(lastIndex);
+  if (textAfter) {
+    appendFormattedLines(textAfter, container);
+  }
+}
+
+function renderFormattedContent(textStr, container) {
+  if (!textStr) return;
+  const text = formatStoreIcons(textStr);
+
+  const receiptRegex = /(🧾\s*ITEMIZED OUT-OF-POCKET RECEIPT[\s\S]*?💰\s*FINAL NET OUT-OF-POCKET:?\s*\$?\d+(?:\.\d{2})?)/gi;
+  const parts = text.split(receiptRegex);
+
+  parts.forEach(part => {
+    if (!part) return;
+
+    if (part.match(/🧾\s*ITEMIZED OUT-OF-POCKET RECEIPT/i)) {
+      const details = el("details", "receipt-accordion");
+      details.open = true;
+
+      const totalMatch = part.match(/💰\s*FINAL NET OUT-OF-POCKET:?\s*(\$?\d+(?:\.\d{2})?)/i);
+      const totalStr = totalMatch ? ` — Final Net: ${totalMatch[1]}` : "";
+
+      const summary = el("summary", "receipt-summary", `🧾 Itemized Out-of-Pocket Receipt${totalStr} (Click to toggle)`);
+      const body = el("div", "receipt-body");
+
+      renderTextWithMarkdownLinks(part, body);
+
+      details.appendChild(summary);
+      details.appendChild(body);
+      container.appendChild(details);
+    } else {
+      const wrapper = el("div", "formatted-text-block");
+      renderTextWithMarkdownLinks(part, wrapper);
+      container.appendChild(wrapper);
+    }
+  });
+}
+
+function extractA2UIFromText(textStr) {
+  if (!textStr || typeof textStr !== "string") return { cleanText: textStr, a2uiMsgs: [] };
+
+  const a2uiMsgs = [];
+  const a2uiKeys = ["beginRendering", "surfaceUpdate", "dataModelUpdate", "deleteSurface"];
+  let cleanText = textStr;
+
+  if (cleanText.includes("<a2a_datapart_json>")) {
+    cleanText = cleanText.replace(/<a2a_datapart_json>([\s\S]*?)(?:<\/a2a_datapart_json>|<a2a_datapart_json>|$)/g, (match, jsonStr) => {
+      try {
+        const parsed = JSON.parse(jsonStr.trim());
+        const data = parsed.data || parsed;
+        if (data && typeof data === "object" && a2uiKeys.some(k => k in data)) {
+          a2uiMsgs.push(data);
+          return "";
+        }
+      } catch (e) {}
+      return match;
+    });
+  }
+
+  const trimmed = cleanText.trim();
+  if (a2uiKeys.some(k => trimmed.includes(k))) {
+    let jsonTarget = trimmed;
+    if (jsonTarget.startsWith("```")) {
+      jsonTarget = jsonTarget.replace(/^```[a-z]*\n?/, "").replace(/```$/, "").trim();
+    }
+    try {
+      const parsed = JSON.parse(jsonTarget);
+      const items = Array.isArray(parsed) ? parsed : [parsed];
+      let foundAny = false;
+      items.forEach(item => {
+        const data = item.data || item;
+        if (data && typeof data === "object" && a2uiKeys.some(k => k in data)) {
+          a2uiMsgs.push(data);
+          foundAny = true;
+        }
+      });
+      if (foundAny) cleanText = "";
+    } catch (e) {}
+  }
+
+  return { cleanText: cleanText.trim(), a2uiMsgs };
+}
+
 function buildNode(id, comps, seen) {
   if (!id || seen.has(id)) return null;
   seen.add(id);
@@ -569,7 +778,7 @@ function buildNode(id, comps, seen) {
       if (["h1", "h2", "h3", "h4", "h5", "h6"].includes(hint)) t.classList.add("a2-" + hint);
       else if (hint === "caption") t.classList.add("a2-caption");
       const textVal = boundStr(props.text);
-      t.textContent = formatStoreIcons(textVal);
+      renderFormattedContent(textVal, t);
       return t;
     }
     case "Divider":
@@ -617,15 +826,33 @@ function flattenText(messages) {
 
 function renderReply(b, parts) {
   b.textContent = "";
-  const texts = parts.filter(p => p && (p.kind === "text" || (!p.kind && p.text))).map(p => p.text || "");
+
+  const rawTexts = parts.filter(p => p && (p.kind === "text" || (!p.kind && p.text))).map(p => p.text || "");
   const a2ui = parts.filter(p => p && p.kind === "a2ui" && p.data).map(p => p.data);
 
-  const textStr = formatStoreIcons(texts.join("\n").trim());
-  if (textStr) b.appendChild(el("div", null, textStr));
+  const combinedRawText = rawTexts.join("\n").trim();
+  const { cleanText, a2uiMsgs } = extractA2UIFromText(combinedRawText);
+
+  if (a2uiMsgs.length) {
+    a2ui.push(...a2uiMsgs);
+  }
+
+  if (cleanText) {
+    const textContainer = el("div", "chat-text-content");
+    renderFormattedContent(cleanText, textContainer);
+    b.appendChild(textContainer);
+  }
 
   if (a2ui.length) {
     b.classList.add("rich");
-    if (!renderSurface(a2ui, b)) b.appendChild(el("div", null, flattenText(a2ui) || "(no card content)"));
+    if (!renderSurface(a2ui, b)) {
+      const flat = flattenText(a2ui);
+      if (flat) {
+        const flatContainer = el("div", "chat-text-content");
+        renderFormattedContent(flat, flatContainer);
+        b.appendChild(flatContainer);
+      }
+    }
   }
   if (!b.childNodes.length) b.textContent = "(no response)";
   log.scrollTop = log.scrollHeight;
@@ -633,7 +860,7 @@ function renderReply(b, parts) {
 
 async function sendMessage(text) {
   if (!text) return;
-  
+
   let queryText = text;
   if (activeStore !== "All" && !text.toLowerCase().includes(activeStore.toLowerCase())) {
     queryText += ` [Filter: Store=${activeStore}]`;
