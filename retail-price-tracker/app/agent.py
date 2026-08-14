@@ -55,7 +55,8 @@ instruction = schema_manager.generate_system_prompt(
         "2. Brand & Product Preferences: Preferred top brands (Google, LG, Sony, Apple, Samsung, Dyson, Bose, Nike), product specs/sizes (65\" OLED, Google Pixel 10 Pro XL, Pixel Buds), and explicit exclusions.\n"
         "3. Budget & Savings Thresholds: Max price limits per category, minimum required discount percentages, and preferred cashback credit cards.\n"
         "4. Location & Shipping: Home Zip code, local tax rates, free 2-day delivery preferences, or willingness to pick up in-store.\n"
-        "5. Watchlists & Purchase History: Items being monitored for price drops and past purchases.\n\n"
+        "5. Watchlists & Purchase History: Items being monitored for price drops and past purchases.\n"
+        "6. Credit Card Perks & Cashback: Preferred cashback cards (Amazon Prime Visa 5%, Target Circle Card 5%, Costco Anywhere 2%, Chase Freedom 5%, Citi Double Cash 2%).\n\n"
         "CRITICAL BRANDING & LOGO RULE:\n"
         "Whenever listing pricing, store offers, or deal summaries, ALWAYS prefix every store name with its recognizable brand logo icon:\n"
         "- 🌐 Google Store\n"
@@ -64,7 +65,10 @@ instruction = schema_manager.generate_system_prompt(
         "- 🎯 Target\n"
         "- 🛒 Walmart\n"
         "- 🏷️ Costco\n\n"
-        "Always check remembered user facts from previous conversations and use them to tailor every price comparison. "
+        "ITEMIZED RECEIPT & DIRECT CHECKOUT RULES:\n"
+        "1. When calculating net prices using `calculate_net_price`, ALWAYS present the calculation using the pre-formatted itemized receipt layout that details Base Price, Store Member Rewards, Credit Card Cashback Perk, Tax, Shipping, and Final Net Out-of-Pocket Total.\n"
+        "2. ALWAYS include a 1-click direct checkout link formatted as: `[ 🛒 Direct Checkout at Store Name ](checkout_url)` below every deal offer and calculation summary.\n"
+        "3. Always check remembered user facts from previous conversations and use them to tailor every price comparison. "
         "When asked about retail policies, return windows, or price match guarantees, use the consult_retail_policies tool to ground your answers on official documentation."
     ),
     workflow_description="Analyze the request and return structured UI when appropriate.",
@@ -130,14 +134,24 @@ def get_current_time(query: str) -> str:
     return f"The current time for query {query} is {now.strftime('%Y-%m-%d %H:%M:%S %Z%z')}"
 
 
+STORE_CHECKOUT_URLS = {
+    "google store": "https://store.google.com",
+    "amazon": "https://www.amazon.com/dp/B0CL5K634B",
+    "best buy": "https://www.bestbuy.com/site/6535928.p",
+    "costco": "https://www.costco.com/catalog.html",
+    "walmart": "https://www.walmart.com/ip/12345678",
+    "target": "https://www.target.com/p/-/A-890123",
+}
+
+
 def search_retail_prices(product_query: str) -> list[dict[str, str | float | bool]]:
-    """Searches top retail platforms (Google Store, Amazon, Best Buy, Target, Walmart, Costco) for current product prices, discounts, and store icons.
+    """Searches top retail platforms (Google Store, Amazon, Best Buy, Target, Walmart, Costco) for current product prices, discounts, store icons, and 1-click checkout URLs.
 
     Args:
         product_query: The product name or search keywords (e.g. 'Google Pixel 10 Pro XL', 'Pixel Buds Pro 2', '65 inch OLED TV').
 
     Returns:
-        A list of dictionaries containing store offers with product title, regular_price, sale_price, store, store_icon, membership_required, and in_stock status.
+        A list of dictionaries containing store offers with product title, regular_price, sale_price, store, store_icon, membership_required, shipping, in_stock, and checkout_url status.
     """
     query_lower = product_query.lower()
 
@@ -157,6 +171,7 @@ def search_retail_prices(product_query: str) -> list[dict[str, str | float | boo
                 "shipping": "Free Standard Shipping",
                 "in_stock": True,
                 "image_url": pixel_phone_img,
+                "checkout_url": "https://store.google.com",
             },
             {
                 "store": "Amazon",
@@ -164,10 +179,11 @@ def search_retail_prices(product_query: str) -> list[dict[str, str | float | boo
                 "title": "Google Pixel 10 Pro XL - Unlocked Android Smartphone",
                 "regular_price": 1199.00,
                 "sale_price": 1149.00,
-                "membership_required": "Prime (Free 2-Day)",
+                "membership_required": "Prime (Free 2-Day + 5% Back with Prime Visa)",
                 "shipping": "Free 2-Day Delivery",
                 "in_stock": True,
                 "image_url": pixel_phone_img,
+                "checkout_url": "https://www.amazon.com/dp/B0CL5K634B",
             },
             {
                 "store": "Best Buy",
@@ -179,6 +195,7 @@ def search_retail_prices(product_query: str) -> list[dict[str, str | float | boo
                 "shipping": "Free Same-Day Pickup",
                 "in_stock": True,
                 "image_url": pixel_phone_img,
+                "checkout_url": "https://www.bestbuy.com/site/6535928.p",
             },
             {
                 "store": "Walmart",
@@ -190,6 +207,7 @@ def search_retail_prices(product_query: str) -> list[dict[str, str | float | boo
                 "shipping": "Free 2-Day Shipping",
                 "in_stock": True,
                 "image_url": pixel_phone_img,
+                "checkout_url": "https://www.walmart.com/ip/12345678",
             },
             {
                 "store": "Target",
@@ -197,10 +215,11 @@ def search_retail_prices(product_query: str) -> list[dict[str, str | float | boo
                 "title": "Google Pixel 10 Pro XL 256GB",
                 "regular_price": 1199.99,
                 "sale_price": 1199.99,
-                "membership_required": "Target Circle (5% RedCard Savings)",
+                "membership_required": "Target Circle (5% Card Savings)",
                 "shipping": "Free 2-Day Shipping",
                 "in_stock": True,
                 "image_url": pixel_phone_img,
+                "checkout_url": "https://www.target.com/p/-/A-890123",
             },
             # Pixel Buds Pro 2
             {
@@ -213,6 +232,7 @@ def search_retail_prices(product_query: str) -> list[dict[str, str | float | boo
                 "shipping": "Free Express Shipping",
                 "in_stock": True,
                 "image_url": pixel_buds_img,
+                "checkout_url": "https://store.google.com",
             },
             {
                 "store": "Amazon",
@@ -224,6 +244,7 @@ def search_retail_prices(product_query: str) -> list[dict[str, str | float | boo
                 "shipping": "Free Prime One-Day",
                 "in_stock": True,
                 "image_url": pixel_buds_img,
+                "checkout_url": "https://www.amazon.com/dp/B0CL5K634B",
             },
             {
                 "store": "Best Buy",
@@ -235,6 +256,7 @@ def search_retail_prices(product_query: str) -> list[dict[str, str | float | boo
                 "shipping": "Free Pickup",
                 "in_stock": True,
                 "image_url": pixel_buds_img,
+                "checkout_url": "https://www.bestbuy.com/site/6535928.p",
             },
             {
                 "store": "Costco",
@@ -246,6 +268,7 @@ def search_retail_prices(product_query: str) -> list[dict[str, str | float | boo
                 "shipping": "Free Standard Shipping",
                 "in_stock": True,
                 "image_url": pixel_buds_img,
+                "checkout_url": "https://www.costco.com/catalog.html",
             },
         ]
 
@@ -262,6 +285,7 @@ def search_retail_prices(product_query: str) -> list[dict[str, str | float | boo
                 "shipping": "Free Shipping",
                 "in_stock": True,
                 "image_url": tv_image,
+                "checkout_url": "https://www.costco.com/catalog.html",
             },
             {
                 "store": "Amazon",
@@ -269,10 +293,11 @@ def search_retail_prices(product_query: str) -> list[dict[str, str | float | boo
                 "title": "LG 65-Inch Class OLED evo C3 Series 4K TV",
                 "regular_price": 1896.99,
                 "sale_price": 1496.99,
-                "membership_required": "Prime (Free 2-Day)",
+                "membership_required": "Prime (Free 2-Day + 5% Back with Prime Visa)",
                 "shipping": "Free Prime Shipping",
                 "in_stock": True,
                 "image_url": tv_image,
+                "checkout_url": "https://www.amazon.com/dp/B0CL5K634B",
             },
             {
                 "store": "Best Buy",
@@ -284,6 +309,7 @@ def search_retail_prices(product_query: str) -> list[dict[str, str | float | boo
                 "shipping": "Free Standard Shipping",
                 "in_stock": True,
                 "image_url": tv_image,
+                "checkout_url": "https://www.bestbuy.com/site/6535928.p",
             },
             {
                 "store": "Walmart",
@@ -295,6 +321,7 @@ def search_retail_prices(product_query: str) -> list[dict[str, str | float | boo
                 "shipping": "$19.99 Freight Delivery",
                 "in_stock": True,
                 "image_url": tv_image,
+                "checkout_url": "https://www.walmart.com/ip/12345678",
             },
         ]
 
@@ -310,6 +337,7 @@ def search_retail_prices(product_query: str) -> list[dict[str, str | float | boo
             "shipping": "Free Shipping",
             "in_stock": True,
             "image_url": gen_image,
+            "checkout_url": "https://store.google.com",
         },
         {
             "store": "Amazon",
@@ -321,6 +349,7 @@ def search_retail_prices(product_query: str) -> list[dict[str, str | float | boo
             "shipping": "Free 2-Day Shipping",
             "in_stock": True,
             "image_url": gen_image,
+            "checkout_url": "https://www.amazon.com/dp/B0CL5K634B",
         },
         {
             "store": "Walmart",
@@ -332,6 +361,7 @@ def search_retail_prices(product_query: str) -> list[dict[str, str | float | boo
             "shipping": "Free Shipping over $35",
             "in_stock": True,
             "image_url": gen_image,
+            "checkout_url": "https://www.walmart.com/ip/12345678",
         },
         {
             "store": "Costco",
@@ -343,23 +373,29 @@ def search_retail_prices(product_query: str) -> list[dict[str, str | float | boo
             "shipping": "Free Standard Shipping",
             "in_stock": True,
             "image_url": gen_image,
+            "checkout_url": "https://www.costco.com/catalog.html",
         },
     ]
 
 
 def calculate_net_price(
-    item_price: float, store: str, zip_code: str, membership: str | None = None
+    item_price: float,
+    store: str,
+    zip_code: str,
+    membership: str | None = None,
+    credit_card: str | None = None,
 ) -> dict[str, float | str]:
-    """Calculates the exact final checkout total factoring in local sales tax, shipping costs, and membership rewards/discounts.
+    """Calculates the exact final checkout total factoring in local sales tax, shipping costs, membership rewards, and stacked credit card cashback perks.
 
     Args:
         item_price: Listed price of the product in USD.
-        store: Name of the retail store (e.g. 'Google Store', 'Costco', 'Amazon', 'Walmart', 'Best Buy').
+        store: Name of the retail store (e.g. 'Google Store', 'Costco', 'Amazon', 'Walmart', 'Best Buy', 'Target').
         zip_code: User's 5-digit US Zip code for sales tax calculation (e.g. '95112').
         membership: Optional membership type (e.g. 'Google One', 'Costco Executive', 'Amazon Prime', 'Walmart+').
+        credit_card: Optional credit card used (e.g. 'Prime Visa', 'Costco Anywhere Visa', 'Target Circle Card', 'Chase Freedom 5%', 'Citi Double Cash 2%').
 
     Returns:
-        A dictionary with item_price, estimated_tax, shipping_fee, membership_discount, and final_net_price.
+        A dictionary with item_price, estimated_tax, shipping_fee, membership_discount, card_cashback, final_net_price, checkout_url, and itemized_receipt.
     """
     tax_rate = 0.0825
     if zip_code.startswith("9"):
@@ -370,8 +406,9 @@ def calculate_net_price(
     estimated_tax = round(item_price * tax_rate, 2)
 
     shipping_fee = 0.0
-    store_lower = store.lower()
+    store_lower = store.lower().strip()
     mem_lower = (membership or "").lower()
+    card_lower = (credit_card or "").lower()
 
     if "prime" in mem_lower or "walmart+" in mem_lower or "executive" in mem_lower or "google" in store_lower:
         shipping_fee = 0.0
@@ -384,8 +421,45 @@ def calculate_net_price(
     elif "google one" in mem_lower and "google" in store_lower:
         membership_discount = round(item_price * 0.10, 2)
 
+    card_cashback = 0.0
+    card_name = credit_card or "Standard Card"
+    if "prime" in card_lower or ("amazon" in store_lower and ("visa" in card_lower or "5%" in card_lower)):
+        card_cashback = round(item_price * 0.05, 2)
+        card_name = "Prime Visa (5% Cashback)"
+    elif "costco" in card_lower or ("costco" in store_lower and "visa" in card_lower):
+        card_cashback = round(item_price * 0.02, 2)
+        card_name = "Costco Anywhere Visa (2% Cashback)"
+    elif "target" in card_lower or "redcard" in card_lower or ("target" in store_lower and "5%" in card_lower):
+        card_cashback = round(item_price * 0.05, 2)
+        card_name = "Target Circle Card (5% Savings)"
+    elif "freedom" in card_lower or "discover" in card_lower or "5%" in card_lower:
+        card_cashback = round(item_price * 0.05, 2)
+        card_name = "5% Category Cashback Card"
+    elif "double cash" in card_lower or "2%" in card_lower or card_lower:
+        card_cashback = round(item_price * 0.02, 2)
+        card_name = credit_card or "2% Flat Cashback Card"
+
     final_net_price = round(
-        item_price + estimated_tax + shipping_fee - membership_discount, 2
+        item_price + estimated_tax + shipping_fee - membership_discount - card_cashback, 2
+    )
+
+    checkout_url = "https://www.costco.com"
+    for key, url in STORE_CHECKOUT_URLS.items():
+        if key in store_lower:
+            checkout_url = url
+            break
+
+    itemized_receipt = (
+        f"🧾 ITEMIZED OUT-OF-POCKET RECEIPT\n"
+        f"─────────────────────────────────\n"
+        f"💵 Base Sticker Price:   ${item_price:.2f}\n"
+        f"🏷️ Store Member Reward:  -${membership_discount:.2f}\n"
+        f"💳 Card Cashback Perk:   -${card_cashback:.2f} ({card_name})\n"
+        f"🏛️ Estimated Sales Tax:   +${estimated_tax:.2f} ({tax_rate * 100:.2f}%)\n"
+        f"🚚 Shipping & Delivery:   +${shipping_fee:.2f}\n"
+        f"─────────────────────────────────\n"
+        f"💰 FINAL NET OUT-OF-POCKET: ${final_net_price:.2f}\n\n"
+        f"🛒 [Direct Checkout at {store}]({checkout_url})"
     )
 
     return {
@@ -395,10 +469,14 @@ def calculate_net_price(
         "estimated_tax": estimated_tax,
         "shipping_fee": shipping_fee,
         "membership_discount": membership_discount,
+        "card_cashback": card_cashback,
+        "card_name": card_name,
         "final_net_price": final_net_price,
+        "checkout_url": checkout_url,
+        "itemized_receipt": itemized_receipt,
         "summary": (
             f"${item_price:.2f} base + ${estimated_tax:.2f} tax + ${shipping_fee:.2f} shipping "
-            f"- ${membership_discount:.2f} reward = ${final_net_price:.2f} total"
+            f"- ${membership_discount:.2f} member reward - ${card_cashback:.2f} card cashback = ${final_net_price:.2f} net total"
         ),
     }
 
